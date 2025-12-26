@@ -97,6 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // For 'builder', the text IS the prompt.
         // For others, we might want to append style keywords if needed, 
         // but Pollinations is smart enough to handle the raw text usually.
+        if (mode === 'explain') {
+            textResult += ", conceptual illustration";
+        }
         return encodeURIComponent(textResult);
     }
 
