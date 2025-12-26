@@ -4,6 +4,7 @@ Insight Engine is an experimental web demonstration exploring the capabilities o
 
 ## 🚀 Features & Modes
 
+Each mode uses the same underlying AI pipeline with different prompt strategies.
 The application features three distinct modes of operation:
 
 ### Mode A: Insight Mode
@@ -41,6 +42,7 @@ This project is a **demo/experiment**.
 *   It relies on public, free APIs which may have rate limits or latency.
 *   No API keys are stored or required.
 *   All generation happens on the fly.
+*   This project is intended for learning and creative exploration purposes only.
 
 ---
 
