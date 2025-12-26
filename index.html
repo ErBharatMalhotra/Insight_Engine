@@ -1,9 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Insight Engine</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Insight Engine</h1>
+  <div class="app-container">
+    <header>
+      <h1>Insight Engine</h1>
+      <p class="subtitle">Experimental AI Exploration</p>
+    </header>
+
+    <nav class="mode-selector">
+      <button class="mode-btn active" data-mode="insight">Mode A: Insight</button>
+      <button class="mode-btn" data-mode="builder">Mode B: Prompt Builder</button>
+      <button class="mode-btn" data-mode="explain">Mode C: Explain (ELI10)</button>
+    </nav>
+
+    <main>
+      <div class="input-group">
+        <input type="text" id="user-input" placeholder="Enter a thought, topic, or idea..." autocomplete="off">
+        <button id="generate-btn">Generate</button>
+      </div>
+
+      <div id="output-area" class="hidden">
+        <div class="text-card" id="text-output"></div>
+        <div class="image-card">
+          <img id="image-output" src="" alt="AI Generated Visualization">
+          <div class="loader" id="image-loader">Generating Visual...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="script.js"></script>
 </body>
 </html>
