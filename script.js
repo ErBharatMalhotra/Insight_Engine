@@ -1,10 +1,12 @@
+const POLLINATIONS_KEY = "pk_4lawhhbmjTjD4xdw";
+
 document.addEventListener('DOMContentLoaded', () => {
     const modeBtns = document.querySelectorAll('.mode-btn');
     const userInput = document.getElementById('user-input');
     const generateBtn = document.getElementById('generate-btn');
     const outputArea = document.getElementById('output-area');
     const textOutput = document.getElementById('text-output');
-    const imageOutput = document.getElementById('image-output');
+    const imageContainer = document.getElementById('image-container');
     const imageLoader = document.getElementById('image-loader');
 
     let currentMode = 'insight';
@@ -39,7 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoading(true);
         outputArea.classList.remove('hidden');
         textOutput.textContent = "Generating text...";
-        imageOutput.classList.remove('loaded');
+        
+        imageContainer.innerHTML = ''; // Clear previous images
+        imageContainer.appendChild(imageLoader); // Ensure loader is present
         imageLoader.style.display = 'block';
 
         try {
@@ -49,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. Generate Image based on text result
             const imagePrompt = constructImagePrompt(textResult, currentMode);
-            await generateImage(imagePrompt);
+            await generateImage(imagePrompt, imageContainer);
 
         } catch (error) {
             textOutput.textContent = "Error: " + error.message;
@@ -65,57 +69,118 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchText(input, mode) {
         let systemPrompt = "";
-        
+
         if (mode === 'insight') {
-            systemPrompt = "You are a wise philosopher. Refine the user's input into a profound, concise insight (max 2 sentences).";
+            systemPrompt =
+              "You are a wise philosopher. Refine the user's input into a profound, concise insight (max 2 sentences).";
         } else if (mode === 'builder') {
-            systemPrompt = "You are an expert prompt engineer. Convert the user's idea into a highly detailed, professional image generation prompt. Output ONLY the prompt text.";
+            systemPrompt =
+              "You are an expert prompt engineer. Convert the user's idea into a highly detailed, professional image generation prompt. Output ONLY the prompt text.";
         } else if (mode === 'explain') {
-            systemPrompt = "You are a teacher explaining things to a 10-year-old. Explain the concept simply and clearly (max 3 sentences).";
+            systemPrompt =
+              "You are a teacher explaining things to a 10-year-old. Explain the concept simply and clearly (max 3 sentences).";
         }
 
-        const response = await fetch('https://text.pollinations.ai/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: input }
-                ],
-                seed: Math.floor(Math.random() * 1000) // Random seed for variety
-            })
-        });
+        const fullPrompt = `${systemPrompt}\nUser Input: ${input}`;
 
-        if (!response.ok) throw new Error('Failed to fetch text');
-        return await response.text();
+        const url =
+          `https://gen.pollinations.ai/text/${encodeURIComponent(fullPrompt)}` +
+          `?model=openai-fast&temperature=0.8&key=${POLLINATIONS_KEY}`;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Text generation failed");
+
+        return (await response.text()).trim();
     }
 
     function constructImagePrompt(textResult, mode) {
-        // We use the generated text to drive the image generation
-        // For 'builder', the text IS the prompt.
-        // For others, we might want to append style keywords if needed, 
-        // but Pollinations is smart enough to handle the raw text usually.
+        let prompt = textResult;
+
         if (mode === 'explain') {
-            textResult += ", conceptual illustration";
+            prompt += ", simple conceptual illustration, clean style";
         }
-        return encodeURIComponent(textResult);
+
+        return prompt.slice(0, 280); // safety clamp
     }
 
-    function generateImage(encodedPrompt) {
-        return new Promise((resolve, reject) => {
-            // Add random seed to URL to prevent caching same images
-            const randomSeed = Math.floor(Math.random() * 10000);
-            const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?n=${randomSeed}`;
-            
-            imageOutput.onload = () => {
-                imageOutput.classList.add('loaded');
-                imageLoader.style.display = 'none';
-                resolve();
-            };
-            imageOutput.onerror = () => reject(new Error('Image failed to load'));
-            imageOutput.src = imageUrl;
-        });
+    async function generateImage(prompt, container) {
+        const encoded = encodeURIComponent(prompt);
+        const seed = Math.floor(Math.random() * 10000);
+
+        // Models sorted by price (cheapest to highest)
+        const models = [
+            "gptimage",       // 0.000008
+            "nanobanana",     // 0.00003
+            "gptimage-large", // 0.000032
+            "flux",           // 0.00012
+            "nanobanana-pro", // 0.00012
+            "zimage",         // 0.0002
+            "turbo"           // 0.0003
+        ];
+
+        const img = new Image();
+        img.loading = "lazy";
+        img.alt = prompt;
+        img.id = "image-output"; // Restore ID for CSS styling
+        img.style.display = "block"; // Ensure it is visible
+        
+        let currentModelIndex = 0;
+
+        const loadNextModel = async () => {
+            if (currentModelIndex >= models.length) {
+                console.warn("Authenticated attempts failed. Trying public endpoint fallback...");
+                
+                // Final fallback to public URL (no auth header needed)
+                const publicUrl = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=512&height=512&nologo=true&seed=${seed}`;
+                
+                img.onerror = () => {
+                    console.error("All image models failed");
+                    imageLoader.style.display = "none";
+                    img.replaceWith(document.createTextNode("⚠️ Image failed to load"));
+                };
+                
+                img.src = publicUrl;
+                return;
+            }
+
+            const model = models[currentModelIndex];
+            const url =
+              `https://gen.pollinations.ai/image/${encoded}` +
+              `?model=${model}&width=512&height=512` +
+              `&nologo=true&nofeed=true` +
+              `&seed=${seed}` +
+              `&key=${POLLINATIONS_KEY}`;
+
+            try {
+                // Debug log for manual testing
+                console.log(`Debug CURL: curl "${url}"`);
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const blob = await response.blob();
+                img.src = URL.createObjectURL(blob);
+            } catch (err) {
+                console.warn(`Model ${model} failed: ${err.message}`);
+                currentModelIndex++;
+                loadNextModel();
+            }
+        };
+
+        img.onload = () => {
+            imageLoader.style.display = "none";
+            img.classList.add('loaded'); // Add class for CSS transitions
+        };
+        img.onerror = () => {
+            console.warn(`Model ${models[currentModelIndex]} image corrupt, trying next...`);
+            currentModelIndex++;
+            loadNextModel();
+        };
+
+        container.appendChild(img);
+        loadNextModel();
+
+        // IMPORTANT delay to avoid rate-limit
+        await new Promise(r => setTimeout(r, 1300)); // rate-safe
     }
 });
