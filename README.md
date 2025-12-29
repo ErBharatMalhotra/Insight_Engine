@@ -2,6 +2,8 @@
 
 Insight Engine is an experimental web demonstration exploring the capabilities of generative AI without the need for backend infrastructure. It leverages **Pollinations AI** public APIs to transform simple user inputs into refined text and visual outputs.
 
+**🔗 Live Demo:** [https://erbharatmalhotra.github.io/Insight_Engine/](https://erbharatmalhotra.github.io/Insight_Engine/)
+
 ## 🚀 Features & Modes
 
 Each mode uses the same underlying AI pipeline with different prompt strategies.
