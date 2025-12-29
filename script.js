@@ -1,4 +1,4 @@
-const POLLINATIONS_KEY = "pk_4lawhhbmjTjD4xdw";
+const POLLINATIONS_KEY = "pk_sEyK4drA2PKwXCAI";
 
 document.addEventListener('DOMContentLoaded', () => {
     const modeBtns = document.querySelectorAll('.mode-btn');
