@@ -1,4 +1,4 @@
-const POLLINATIONS_KEY = "pk_4lawhhbmjTjD4xdw";
+const POLLINATIONS_KEY = "pk_sEyK4drA2PKwXCAI";
 
 document.addEventListener('DOMContentLoaded', () => {
     const modeBtns = document.querySelectorAll('.mode-btn');
@@ -81,16 +81,27 @@ document.addEventListener('DOMContentLoaded', () => {
               "You are a teacher explaining things to a 10-year-old. Explain the concept simply and clearly (max 3 sentences).";
         }
 
-        const fullPrompt = `${systemPrompt}\nUser Input: ${input}`;
+        const fullPrompt = `${systemPrompt} User Input: ${input}`;
 
-        const url =
-          `https://gen.pollinations.ai/text/${encodeURIComponent(fullPrompt)}` +
-          `?model=openai-fast&temperature=0.8&key=${POLLINATIONS_KEY}`;
+        // Fallback models: cheapest/fastest first
+        const models = ["nova-fast"];
 
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Text generation failed");
+        for (const model of models) {
+            try {
+                const url =
+                  `https://gen.pollinations.ai/text/${encodeURIComponent(fullPrompt)}` +
+                  `?model=${model}&temperature=0.8&key=${POLLINATIONS_KEY}`;
 
-        return (await response.text()).trim();
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                return (await response.text()).trim();
+            } catch (error) {
+                console.warn(`Text model ${model} failed: ${error.message}. Trying next...`);
+            }
+        }
+
+        throw new Error("All text generation models failed");
     }
 
     function constructImagePrompt(textResult, mode) {
@@ -109,13 +120,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Models sorted by price (cheapest to highest)
         const models = [
-            "gptimage",       // 0.000008
-            "nanobanana",     // 0.00003
-            "gptimage-large", // 0.000032
+            
             "flux",           // 0.00012
-            "nanobanana-pro", // 0.00012
             "zimage",         // 0.0002
-            "turbo"           // 0.0003
         ];
 
         const img = new Image();
@@ -131,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn("Authenticated attempts failed. Trying public endpoint fallback...");
                 
                 // Final fallback to public URL (no auth header needed)
-                const publicUrl = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=512&height=512&nologo=true&seed=${seed}`;
+                const publicUrl = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=1024&height=1024&seed=${seed}&enhance=false`;
                 
                 img.onerror = () => {
                     console.error("All image models failed");
@@ -146,9 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const model = models[currentModelIndex];
             const url =
               `https://gen.pollinations.ai/image/${encoded}` +
-              `?model=${model}&width=512&height=512` +
-              `&nologo=true&nofeed=true` +
-              `&seed=${seed}` +
+              `?model=${model}&width=1024&height=1024` +
+              `&seed=${seed}&enhance=false` +
               `&key=${POLLINATIONS_KEY}`;
 
             try {
